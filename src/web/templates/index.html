@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Boba - {{request.form.get('bot_name')}}</title>
+    <script> 
+    document.addEventListener("DOMContentLoaded", function() {
+        const params = new URLSearchParams(window.location.search);
+        var personalIdentityInput = document.querySelector('#personal_identity');
+        if (personalIdentityInput.value == 'None' || personalIdentityInput.value == '') {
+            personalIdentityInput.value = 'the character Madeline from the 2018 platform video game Celeste';
+        }
+        var botNameInput = document.querySelector('#bot_name');
+        if (botNameInput.value == 'None' || botNameInput.value == '') {
+            botNameInput.value = 'MaddyBot';
+        }
+        var conversationIdInput = document.querySelector('#conversation_id');
+        if (conversationIdInput.value == 'None' || conversationIdInput.value == '') {
+            conversationIdInput.value = generateRandomString(64)
+        }
+        var apiKeyInput = document.querySelector('#openai_apikey');
+        if(localStorage.getItem("openai_apikey")) { 
+            apiKeyInput.value = localStorage.getItem("openai_apikey")
+        }
+        function setConversationInfo(conversationId, botName, personalIdentity) {
+            const conversationInfo = {
+                conversation_id: conversationId,
+                bot_name: botName,
+                personal_identity: personalIdentity
+            };
+            localStorage.setItem(`conversation${conversationId}`, JSON.stringify(conversationInfo));
+            localStorage.setItem("openai_apikey", document.getElementById("openai_apikey").value);
+            }
+            const sendButton = document.querySelector('button[type="submit"]');
+            sendButton.addEventListener('click', function(event) {
+                const conversationIdInput = document.querySelector('#conversation_id');
+                const botNameInput = document.querySelector('#bot_name');
+                const personalIdentityInput = document.querySelector('#personal_identity');
+                setConversationInfo(conversationIdInput.value, botNameInput.value, personalIdentityInput.value);
+            });
+
+        function getConversationInfo(conversationId) {
+            const conversationInfo = localStorage.getItem(`conversation${conversationId}`);
+            return JSON.parse(conversationInfo);
+        }
+        function removeConversationInfo(conversationId) {
+            localStorage.removeItem(`conversation${conversationId}`);
+        }
+        function displayRecentConversations() {
+            const recentConversations = document.getElementById('recent-conversations');
+            recentConversations.innerHTML = '<h2>Recent <br/>conversations</h2>';
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.startsWith('conversation')) {
+                const conversation = JSON.parse(localStorage.getItem(key));
+                const link = document.createElement('a');
+                link.href = `/?conversation_id=${conversation.conversation_id}&personal_identity=${btoa(conversation.personal_identity)}&bot_name=${conversation.bot_name}`;
+                link.textContent = conversation.bot_name;
+                recentConversations.appendChild(link);
+                const br = document.createElement('br');
+                recentConversations.appendChild(br);
+                }
+            }
+        }
+        displayRecentConversations();
+        // Set form input values based on URL parameters
+        if (params.has('conversation_id')) {
+        conversationIdInput.value = params.get('conversation_id');
+        }
+
+        if (params.has('personal_identity')) {
+        personalIdentityInput.value = atob(params.get('personal_identity'));
+        }
+    })
+      var data = {
+        content: content,
+        metadata: {
+            personal_identity: personal_identity,
+            bot_name: bot_name,
+        },
+      };
+      function loadFile(event) {
+        var input = event.target;
+        var reader = new FileReader();
+        reader.onload = function(){
+            var json_data = JSON.parse(reader.result);
+            updateFields(json_data.metadata);
+        };
+        reader.readAsText(input.files[0]);
+      }
+      function updateFields(metadata) {
+        if (metadata && metadata.personal_identity) {
+            personalIdentityInput.value = metadata.personal_identity;
+        }
+        if (metadata && metadata.bot_name) {
+            botNameInput.value = metadata.bot_name;
+        }
+        if (metadata && metadata.conversation_id) {
+            document.getElementById('conversation_id').value = metadata.conversation_id;
+        }
+      }
+      function downloadChat() {
+        document.getElementById("content").value = "!DOWNLOAD";
+        document.querySelector("form").submit();
+      }
+      function sleep(milliseconds) {  
+        return new Promise(resolve => setTimeout(resolve, milliseconds));  
+      }  
+      async function generateLink() {
+        var fullUrl = window.location.protocol + "//" + window.location.hostname + `/?conversation_id=${document.querySelector('#conversation_id').value}&personal_identity=${btoa(document.querySelector('#personal_identity').value)}&bot_name=${document.querySelector('#bot_name').value}`
+        document.getElementById("link-gen").innerHTML = "Copied to clipboard"
+        navigator.clipboard.writeText(fullUrl);
+        await sleep(3000)
+        document.getElementById("link-gen").innerHTML = "Generate Chat Link"
+      }
+      function generateRandomString(length) {
+        let result = '';
+        const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@$%^*()`~_+-=<>,.[]{}/\\~;:\'\"';
+        const charactersLength = characters.length;
+        for (let i = 0; i < length; i++) {
+            result += characters.charAt(Math.floor(Math.random() * charactersLength));
+        }
+        return result;
+      }
+      function clearConversations(length) {
+        localStorage.clear();
+        window.location.reload();
+      }
+    </script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuidv4.min.js"></script>
+    <style>
+        #recent-conversations {
+            position: fixed;
+            text-align: center;
+            padding-left: 2.5em;
+            padding-right: 1.5em;
+        }
+    </style>
+</head>
+<body>
+    <div id="recent-conversations"></div>
+    <div class="container mt-5">
+        <h1>Boba</h1>
+        <form method="POST" enctype="multipart/form-data">
+            <div class="mb-3">
+                <label for="openai_apikey" class="form-label">OpenAI API key:</label>
+                <input type="password" class="form-control" id="openai_apikey" name="openai_apikey" value="{{ request.form.get('openai_apikey') }}"> 
+            </div>
+            <div class="mb-3">
+                <label for="conversation_id" class="form-label">Conversation ID:</label>
+                <input type="text" class="form-control" id="conversation_id" name="conversation_id" value="{{ request.form.get('conversation_id') }}">
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('conversation_id').value = generateRandomString(64)">Generate Random ID</button>
+            </div>
+            <div class="mb-3">
+                <label for="personal_identity" class="form-label">Personal identity:</label>
+                <input type="text" class="form-control" id="personal_identity" name="personal_identity" value="{{ request.form.get('personal_identity') }}">
+                <input type="checkbox" id="sas" name="sas" value="1">
+                <label for="sas">Self-awareness suppression (<a href="/docs#SAS">What's this?</a>)</label>
+            </div>
+            <div class="mb-3">
+                <label for="bot_name" class="form-label">Bot name:</label>
+                <input type="text" class="form-control" id="bot_name" name="bot_name" value="{{ request.form.get('bot_name') }}">
+            </div>
+            <div class="mb-3">
+                <label for="file" class="form-label">Upload file:</label>
+                <input type="file" class="form-control" id="file" name="file" onchange="loadFile(event)">
+            </div>
+            <div class="mb-3">
+                <label for="content" class="form-label">Your message:</label>
+                <input type="text" class="form-control" id="content" name="content">
+            </div>
+            <button type="submit" class="btn btn-primary">Send</button>
+            <button type="button" class="btn btn-secondary" onclick="downloadChat()">Download Chat History</button>
+            <button type="button" class="btn btn-secondary" id="link-gen" onclick="generateLink()">Generate Chat Link</button>
+            <button type="button" class="btn btn-secondary" id="link-gen" onclick="clearConversations()">Clear Conversations</button>
+        </form>
+        {% if messages %}
+        <hr>
+        {% for message in messages %}
+        <div class="mb-3">
+            {% if message['role'] == 'user' %}
+            <strong>You:</strong>
+            {% endif %}
+            {% if message['role'] == 'assistant' %}
+            <strong>{{ bot_name }}:</strong>
+            {% endif %}
+            <p>{{ message['content'] }}</p>
+        </div>
+        {% endfor %}
+        {% endif %}
+    </div>
+    <!-- Include Bootstrap JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
