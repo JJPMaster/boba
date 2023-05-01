@@ -1,3 +1,4 @@
+"""This is the Boba command-line interface."""
 import openai
 import json
 import base64
