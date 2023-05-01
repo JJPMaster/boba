@@ -1,3 +1,4 @@
+"""This is the Boba web application."""
 from flask import Flask, render_template, request, send_file
 import openai
 import json
